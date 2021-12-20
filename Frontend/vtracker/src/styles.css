@@ -1,0 +1,66 @@
+@import "mat-styles.css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500&family=Roboto:wght@500;700&display=swap');
+
+
+/* Override default Angular styles for the following components */
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Override the default Material styles for the following components */
+
+a {
+    /* Do not change color when links are clicked */
+    color: inherit;
+    /* No text decorations on links */
+    text-decoration: none;
+}
+
+.mat-card > * {
+    /* Force Inter font for all card content */
+    font-family: 'Inter', sans-serif !important;
+}
+
+.mat-tooltip {
+    /* Make tooltips a bit bigger for readability */
+    font-size: 14px;
+    /* Set font family to Inter because apparently it's not set by mat-card */
+    font-family: 'Inter', sans-serif !important;
+}
+
+.mat-toolbar {
+    background-color: #18181b;
+}
+
+ .mat-button-toggle {
+    /* Make toggle buttons match regular buttons */
+        height: 36px !important;
+        align-items: center;
+ }
+
+ .mat-button-toggle-standalone{
+    /* Remove border for toggle buttons */
+    border: none !important;
+    /* Fix misalignment between toggle buttons and regular buttons */
+    top: 2px !important;
+  }
+
+  .mat-button-toggle-checked{
+    /* Change icon color to purple */
+    color: #9c27b0;
+
+}
+
+.mat-tab-list {
+    background-color: #18181b;
+}
+
+.mat-tab-group {
+    background-color: #0e0e10
+}
+
+.mat-tab-label{
+    background-color: #18181b;
+}

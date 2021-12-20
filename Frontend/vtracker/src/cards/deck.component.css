@@ -1,0 +1,14 @@
+.content {
+    background-color: #0e0e10;
+    padding: 16px;
+}
+
+.toolbar-spacer {
+    flex: 1 1 auto;
+}
+
+.reminder {
+    font-size: 10px;
+    display: inline-block;
+    vertical-align: bottom;
+}

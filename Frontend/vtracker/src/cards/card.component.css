@@ -1,0 +1,141 @@
+/* Custom Twitch-style card animation */
+
+.twitch-card-bg {
+    top: -16px;
+    margin-top: -16px;
+    margin-bottom: -16px;
+    margin-left: -16px;
+    margin-right: -16px;
+    border-top-left-radius: 5px !important;
+    border-top-right-radius: 5px !important;
+    position: relative;
+    background-color: #9147ff;
+}
+  
+.twitch-card-bg:before,
+.twitch-card-bg:after {
+    content: '';
+    background-color: inherit;
+    width: 8px;
+    height: 8px;
+    position: absolute;
+    transition: all .15s ease;
+}
+
+.twitch-card-bg:before {
+    top: 1px;
+    left: 1px;
+    transform-origin: top left;
+    transform: rotate(-45deg) scale(0);
+}
+
+.twitch-card-bg:after {
+    right: 0;
+    bottom: 0;
+    transform-origin: bottom right;
+    transform: rotate(45deg) scale(0);
+}
+
+.twitch-card-thumb{
+    display: block;
+    top: 0px !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+    margin-left: 0px !important;
+    margin-right: 0px  !important;
+    width: 100%;
+    border-top-left-radius: 4px !important;
+    border-top-right-radius: 4px !important;
+    padding-right: 0;
+    transform: translate(0, 0);
+    transition: all .15s ease;
+    position: relative;
+    z-index: 10;
+    cursor: pointer;
+}
+
+.twitch-card-bg:hover .twitch-card-thumb {
+    transform: translate(6px, -6px);
+}
+
+.twitch-card-bg:hover .overlay {
+    transform: translate(6px, -6px);
+}
+
+.twitch-card-bg:hover:before {
+    transform: rotate(-45deg) scale(1);
+}
+
+.twitch-card-bg:hover:after {
+    transform: rotate(45deg) scale(1);
+}
+
+.mat-card-header {
+    padding-top: 32px;
+}
+
+.overlay {
+    font-size: 13px;
+    width: 100%;
+    height: 100%;            
+    position: absolute;
+    
+    transform: translate(0, 0);
+    transition: all .15s ease;
+    cursor: pointer;
+    z-index: 11;
+}
+
+.overlay-status {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 14px;
+    background-color:#e91916;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 1px;
+    padding-bottom: 2px;
+    border-radius: 4px;
+}
+
+.overlay-viewers {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    font-size: 14px;
+    background-color:#00000090;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 1px;
+    padding-bottom: 2px;
+    border-radius: 4px;
+}
+
+/* Material Overrides */
+
+.mat-card-title {
+    /* Increase font size for card title */
+    font-size: 14px;
+    /* Don't change cursor when hovering over card title */
+    cursor: default;
+    white-space: nowrap; /* forces text to single line */
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+}
+
+.mat-card-subtitle {
+    /* Decrease font size for card subtitle */
+    font-size: 13px;
+    /* Don't change cursor when hovering over card title */
+    cursor: default;
+}
+
+.mat-standard-chip {
+    /* Make chips smaller and thinner, to match Twitch styling */
+    padding: 10px 10px !important;
+    font-size: 12px;
+    /* Set font family to Inter because apparently it's not set by mat-card */
+    font-family: 'Inter', sans-serif !important;
+ }
+

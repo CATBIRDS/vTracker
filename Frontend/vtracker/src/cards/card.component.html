@@ -1,0 +1,33 @@
+<mat-card class="mat-elevation-z4">
+
+  <div mat-card-content class="twitch-card-bg" [style.background-color]="twitchColor">
+    <div class="overlay" (click)="jsLink(streamURL);">
+      <span class="overlay-status"[innerText]="status" [ngStyle]="{'background-color': status == 'LIVE' ? '#e91916' : '#464649'}"></span>
+      <span class="overlay-viewers"[innerText]="viewerString"></span>
+    </div>
+    <img mat-card-image class="twitch-card-thumb" [src]="imageURL">
+  </div>
+  <mat-card-header>
+    <img mat-card-avatar [src]='avatarURL'>
+    <mat-card-title matTooltip={{title}} matTooltipPosition="above" matTooltipShowDelay="500">
+      {{ (title.length>30)? (title | slice:0:30)+'...':(title) }}
+    </mat-card-title>
+    <mat-card-subtitle>{{streamer}}</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-chip-list>
+      <mat-chip *ngFor="let tag of tags | slice:0:4;">{{humanizeTag(tag)}}</mat-chip>
+    </mat-chip-list>
+  </mat-card-content>
+  <mat-card-actions>
+    <button mat-raised-button color="primary">
+      <a [href]="streamURL" target="_blank" [innerText]="buttonString"></a>
+    </button>
+    <button mat-raised-button color="accent" [routerLink]="['/analytics', streamerURL]">
+      Details
+    </button>
+    <mat-button-toggle [ngStyle]="{'color' : favorite ? 'red' : 'white'}" (click)="toggleFavorite(streamerURL)">
+      <mat-icon>favorite</mat-icon>
+    </mat-button-toggle>
+  </mat-card-actions>
+</mat-card>

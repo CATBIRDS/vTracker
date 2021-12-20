@@ -1,0 +1,72 @@
+<div class="content">
+
+  
+
+  <mat-expansion-panel>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        Favorites
+      </mat-panel-title>
+      <mat-panel-description>
+        {{initStorage().length != 0 ? '' : 'Favorite some vTubers to get started!'}}
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    <span>{{initStorage().length != 0 ? '' : 'Favorited vTubers will appear here.'}}</span>
+
+    <div fxLayout="row wrap" fxLayoutGap="16px grid">
+      <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of initStorage()">
+        <pm-card
+        
+        [imageURL]="parseFavorite(card, 'thumbnail_url').replace('{width}', '440').replace('{height}', '248')"
+        [title]="parseFavorite(card, 'title')"
+        [streamer]="parseFavorite(card, 'user_name')"
+        [streamURL]="'https://www.twitch.tv/' + parseFavorite(card, 'user_login')"
+        [streamerURL]="parseFavorite(card, 'user_login')"
+        [viewers]="parseFavorite(card, 'viewer_count')"
+        [viewerString]="parseFavorite(card, 'viewer_string')"
+        [status]="parseFavorite(card, 'type') == 'live' ? 'LIVE' : 'OFFLINE'"
+        [buttonString]="parseFavorite(card, 'type') == 'live' ? 'Watch Live on Twitch' : 'View Channel on Twitch'"
+        [tags]="tagStrip(parseFavorite(card, 'tag_ids'))"
+        [favorite]="checkFavorite(parseFavorite(card, 'user_login'))"
+  
+        ></pm-card>
+  
+      </div>
+    </div>
+
+  </mat-expansion-panel>
+
+  <mat-toolbar>All vTubers</mat-toolbar>
+  <mat-paginator 
+    [length]="vtuberDict.length"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="pageSizeOptions"
+    (page)="pageEvent = $event"
+    aria-label="Select page">
+  </mat-paginator>
+  <div fxLayout="row wrap" fxLayoutGap="16px grid" *ngIf="pageEvent">
+    <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of vtuberDict.slice(
+    pageEvent.pageIndex == undefined ? 0 : pageEvent.pageIndex*pageEvent.pageSize,
+    pageEvent.pageIndex == undefined ? pageSize : (pageEvent.pageIndex*pageEvent.pageSize)+pageEvent.pageSize
+    )">
+
+      <pm-card
+      
+      [imageURL]="card['twitch']['thumbnail_url'].replace('{width}', '440').replace('{height}', '248')"
+      [title]="card['twitch']['title']"
+      [streamer]="card['twitch']['user_name'].toLowerCase() == card['twitch']['user_login'] ? card['twitch']['user_name'] : card['twitch']['user_name'] +  ' (' + card['twitch']['user_login'] + ')' "
+      [streamURL]="'https://www.twitch.tv/' + card['twitch']['user_login']"
+      [streamerURL]="card['twitch']['user_login']"
+      [viewers]="card['twitch']['viewer_count']"
+      [viewerString]="card['twitch']['viewer_count'] == 0 ? '' : numberStringFormat(card['twitch']['viewer_count']) + ' viewers'"
+      [status]="card['twitch']['type'] == 'live' ? 'LIVE' : 'OFFLINE'"
+      [buttonString]="card['twitch']['type'] == 'live' ? 'Watch Live on Twitch' : 'View Channel on Twitch'"
+      [tags]="tagStrip(card['twitch']['tag_ids'])"
+      [favorite]="checkFavorite(card['twitch']['user_login'])"
+
+      ></pm-card>
+
+    </div>
+  </div>
+</div>
