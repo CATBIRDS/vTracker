@@ -1,11 +1,16 @@
 .content {
     background-color: #0e0e10;
     padding: 16px;
+    height: 100%;
 }
 
 .toolbar-spacer {
     flex: 1 1 auto;
 }
+
+.tag-chip-list {
+    width: 100%;
+  }
 
 .reminder {
     font-size: 10px;

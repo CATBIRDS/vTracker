@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, Injectable, Input } from '@angular/core';
+import { Component, ChangeDetectorRef, Injectable, Input, Output, EventEmitter } from '@angular/core';
 import * as tagJSON from '../assets/json/tags.json';
 
 @Component({
@@ -24,6 +24,9 @@ export class CardComponent {
   @Input() buttonString: string;
   @Input() favorite: boolean;
 
+  // Received parent functions
+  @Output() addTag = new EventEmitter<string>();
+
   constructor(private cdr: ChangeDetectorRef) {
     this.title = 'Shina Inu vs Jōmon Dog - VALORANT Champions: Berlin - Finals';
     this.imageURL = 'https://material.angular.io/assets/img/examples/shiba2.jpg';
@@ -40,6 +43,10 @@ export class CardComponent {
   }
 
   tagMap = new Map(Object.entries(tagJSON));
+
+  tagClick(tag: string){
+    this.addTag.emit(tag);
+  }
 
   humanizeTag(tag: string) {
     return this.tagMap.get(tag);

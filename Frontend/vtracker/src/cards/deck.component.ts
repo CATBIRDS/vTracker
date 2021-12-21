@@ -1,6 +1,14 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, ViewChild } from '@angular/core';
+import {COMMA, ENTER} from '@angular/cdk/keycodes';
 import { vtuberService } from 'src/api/service';
 import {PageEvent} from '@angular/material/paginator';
+import {Form, FormControl} from '@angular/forms';
+import {MatAutocompleteSelectedEvent} from '@angular/material/autocomplete';
+import {MatChipInputEvent} from '@angular/material/chips';
+import * as tagJSON from '../assets/json/tags.json';
+import {Observable} from 'rxjs';
+import {map, startWith} from 'rxjs/operators';
+
 
 @Component({
   selector: 'pm-deck',
@@ -8,9 +16,10 @@ import {PageEvent} from '@angular/material/paginator';
   styleUrls: ['./deck.component.css'],
   providers: [vtuberService, PageEvent]
 })
+
 export class DeckComponent {
 
-  constructor(private vtubers: vtuberService, public pageEvent: PageEvent) { }
+  tagMap = new Map(Object.entries(tagJSON));
 
   private dataurl = 'https://vtrackerbucket.s3.us-east-2.amazonaws.com/vtubers.json';
   private histurl = 'https://vtrackerbucket.s3.us-east-2.amazonaws.com/history.json';
@@ -18,7 +27,13 @@ export class DeckComponent {
   public favoritesArray = this.initStorage();
   public favoritesDict: any = [];
 
-  public length = 100;
+  separatorKeysCodes: number[] = [ENTER, COMMA];
+  tagCtrl: FormControl = new FormControl();
+  filteredtags: Observable<string[]>;
+  public tags: string[] = [];
+  alltags: string[] = Array.from(this.tagMap.values());
+
+  public length: number = 0;
   public pageSize = 10;
   public pageSizeOptions: number[] = [5, 10, 25, 100];
 
@@ -26,10 +41,122 @@ export class DeckComponent {
   private dead: any = [];
   public vtuberDict: any = [];
 
-  nuke(){
-    // remove all localstorage
-    localStorage.removeItem('favorites');
+  constructor(private vtubers: vtuberService, public pageEvent: PageEvent, public tagInput: ElementRef<HTMLInputElement>) {
+    
+
+    this.filteredtags = this.tagCtrl.valueChanges.pipe(
+      startWith(null),
+      map((tag: string | null) => (tag ? this._filter(tag) : this.alltags.slice())),
+    );
   }
+
+  // Chip Functions
+
+  add(event: MatChipInputEvent): void {
+    const value = (event.value || '').trim();
+
+    // Add our tag
+    if (value) {
+      this.tags.push(value);
+    }
+
+    // Clear the input value
+    event.chipInput!.clear();
+
+    this.tagCtrl.setValue(null);
+  }
+
+  manualAdd(input: string){ 
+    console.log(this.tags);
+    let temp =  this.tagMap.get(input);
+    if (temp) {
+      this.tags.push(temp);
+    }
+  }
+
+  remove(tag: string): void {
+    const index = this.tags.indexOf(tag);
+
+    if (index >= 0) {
+      this.tags.splice(index, 1);
+    }
+  }
+
+  selected(event: MatAutocompleteSelectedEvent): void {
+    this.tags.push(event.option.viewValue);
+    this.tagInput.nativeElement.value = '';
+    this.tagCtrl.setValue(null);
+  }
+
+  private _filter(value: string): string[] {
+    const filterValue = value.toLowerCase();
+    
+    return this.alltags.filter(tag => tag.toLowerCase().includes(filterValue));
+  }
+
+  tagMatch(input: Array<string>){
+    if(this.tags.length == 0) {
+      return true;
+    }
+    let humanizedTags: Array<string> = [];
+    for (let tag of input) {
+      let temp = this.tagMap.get(tag);
+      if (temp) {
+        humanizedTags.push(temp);
+      }
+    }
+    for (let tag of this.tags) {
+      if (!humanizedTags.includes(tag)) {
+        return false
+      }
+    }
+    return true;
+  }
+
+  noPipe(start: number | undefined, end: number, filter: Array<string>) {
+    if (filter.length == 0) {
+      if (end == 0) {
+        return this.vtuberDict;
+      }
+      return this.vtuberDict.slice(start, end);
+    }
+    let result: any = [];
+
+    // if any tag in vtuber['twitch']['tag_ids'] does not match any tag in filter, skip
+    for (let vtuber of this.vtuberDict) {
+      let match = true;
+      // if not iterable
+      if (!Array.isArray(vtuber['twitch']['tag_ids'])) {
+        match = false;
+      }
+      else {
+        // make new array of tags by mapping tag_ids to tagMap
+        let humanizedTags: Array<string> = [];
+        for (let tag of vtuber['twitch']['tag_ids']) {
+          let temp = this.tagMap.get(tag);
+          if (temp) {
+            humanizedTags.push(temp.toLowerCase());
+          }
+        }
+        // if all tags in filter are in humanizedTags, match = true
+        for (let tag of filter) {
+          if (!humanizedTags.includes(tag.toLowerCase())) {
+            match = false;
+          } 
+        }
+        if (match) {
+          result.push(vtuber);
+        }
+      }
+      
+    }
+    if (end == 0) {
+      return result;
+    }
+    return result.slice(start, end);
+  }
+
+  // LocalStorage Functions
 
   parseFavorite(input: string, parameter: string){
     for (let vtuber in this.vtuberDict) {
@@ -84,6 +211,8 @@ export class DeckComponent {
     }
   }
 
+  // Misc. Functions
+
   tagStrip(input: Array<string>){
     let vGUID = '52d7e4cc-633d-46f5-818c-bb59102d9549'; // Manually added GUID for Vtuber Tag
     let filtered = input.filter(e => e !== vGUID);
@@ -93,7 +222,6 @@ export class DeckComponent {
   listStreamers() {
     this.vtubers.getData().toPromise().then(data => {
       let temp: any = data;
-      length = temp.length;
       for (let streamer in temp) {
 
         // Push Live Streamers
@@ -135,6 +263,7 @@ export class DeckComponent {
 
   ngOnInit() {
     this.listStreamers();
+    
   }
 
 }

@@ -1,7 +1,6 @@
 <div class="content">
 
-  
-
+  <!-- Favorites -->
   <mat-expansion-panel>
     <mat-expansion-panel-header>
       <mat-panel-title>
@@ -11,13 +10,10 @@
         {{initStorage().length != 0 ? '' : 'Favorite some vTubers to get started!'}}
       </mat-panel-description>
     </mat-expansion-panel-header>
-
     <span>{{initStorage().length != 0 ? '' : 'Favorited vTubers will appear here.'}}</span>
-
     <div fxLayout="row wrap" fxLayoutGap="16px grid">
       <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of initStorage()">
         <pm-card
-        
         [imageURL]="parseFavorite(card, 'thumbnail_url').replace('{width}', '440').replace('{height}', '248')"
         [title]="parseFavorite(card, 'title')"
         [streamer]="parseFavorite(card, 'user_name')"
@@ -29,28 +25,54 @@
         [buttonString]="parseFavorite(card, 'type') == 'live' ? 'Watch Live on Twitch' : 'View Channel on Twitch'"
         [tags]="tagStrip(parseFavorite(card, 'tag_ids'))"
         [favorite]="checkFavorite(parseFavorite(card, 'user_login'))"
-  
         ></pm-card>
-  
       </div>
     </div>
-
   </mat-expansion-panel>
 
+  <!-- Main -->
   <mat-toolbar>All vTubers</mat-toolbar>
+
+  <mat-form-field class="tag-chip-list" appearance="fill">
+    <mat-label>Filter by tags</mat-label>
+    <mat-chip-list #chipList aria-label="tag selection">
+      <mat-chip
+        *ngFor="let tag of tags"
+        (removed)="remove(tag)">
+        {{tag}}
+        <button matChipRemove>
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </mat-chip>
+      <input
+        [formControl]="tagCtrl"
+        placeholder="New tag..."
+        [matAutocomplete]="auto"
+        [matChipInputFor]="chipList"
+        [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+        (matChipInputTokenEnd)="add($event)">
+    </mat-chip-list>
+    <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selected($event)">
+      <!-- Disabled until I can debug why this is busted
+      <mat-option *ngFor="let tag of filteredtags | async" [value]="tag">
+        {{tag}}
+      </mat-option>
+      -->
+    </mat-autocomplete>
+  </mat-form-field>
+
   <mat-paginator 
-    [length]="vtuberDict.length"
+    [length]="noPipe(0,0,tags).length"
     [pageSize]="pageSize"
     [pageSizeOptions]="pageSizeOptions"
     (page)="pageEvent = $event"
     aria-label="Select page">
   </mat-paginator>
-  <div fxLayout="row wrap" fxLayoutGap="16px grid" *ngIf="pageEvent">
-    <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of vtuberDict.slice(
-    pageEvent.pageIndex == undefined ? 0 : pageEvent.pageIndex*pageEvent.pageSize,
-    pageEvent.pageIndex == undefined ? pageSize : (pageEvent.pageIndex*pageEvent.pageSize)+pageEvent.pageSize
-    )">
-
+  <div fxLayout="row wrap" fxLayoutGap="16px grid">
+    <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of noPipe(
+      pageEvent.pageIndex == undefined ? 0 : pageEvent.pageIndex*pageEvent.pageSize, 
+      pageEvent.pageIndex == undefined ? pageSize : (pageEvent.pageIndex*pageEvent.pageSize)+pageEvent.pageSize, 
+      tags)">
       <pm-card
       
       [imageURL]="card['twitch']['thumbnail_url'].replace('{width}', '440').replace('{height}', '248')"
@@ -64,9 +86,8 @@
       [buttonString]="card['twitch']['type'] == 'live' ? 'Watch Live on Twitch' : 'View Channel on Twitch'"
       [tags]="tagStrip(card['twitch']['tag_ids'])"
       [favorite]="checkFavorite(card['twitch']['user_login'])"
-
+      (addTag)="manualAdd($event)"
       ></pm-card>
-
     </div>
   </div>
 </div>

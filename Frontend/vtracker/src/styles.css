@@ -40,6 +40,10 @@ a {
         align-items: center;
  }
 
+ button:focus {
+    outline: none !important;
+}
+
  .mat-button-toggle-standalone{
     /* Remove border for toggle buttons */
     border: none !important;
