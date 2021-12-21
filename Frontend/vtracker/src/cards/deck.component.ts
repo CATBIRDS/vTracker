@@ -34,8 +34,8 @@ export class DeckComponent {
   alltags: string[] = Array.from(this.tagMap.values());
 
   public length: number = 0;
-  public pageSize = 10;
-  public pageSizeOptions: number[] = [5, 10, 25, 100];
+  public pageSize = 12;
+  public pageSizeOptions: number[] = [12, 24, 48, 96];
 
   private live: any = [];
   private dead: any = [];
@@ -70,7 +70,12 @@ export class DeckComponent {
     console.log(this.tags);
     let temp =  this.tagMap.get(input);
     if (temp) {
-      this.tags.push(temp);
+      if (!this.tags.includes(temp)) {
+        this.tags.push(temp);
+      }
+      else {
+        this.tags.splice(this.tags.indexOf(temp), 1);
+      }
     }
   }
 

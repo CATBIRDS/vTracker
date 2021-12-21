@@ -137,5 +137,7 @@
     font-size: 12px;
     /* Set font family to Inter because apparently it's not set by mat-card */
     font-family: 'Inter', sans-serif !important;
+    /* Set cursor to pointer */
+    cursor: pointer;
  }
 

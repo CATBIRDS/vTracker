@@ -1,15 +1,14 @@
 <mat-card class="mat-elevation-z4">
-
   <div mat-card-content class="twitch-card-bg" [style.background-color]="twitchColor">
     <div class="overlay" (click)="jsLink(streamURL);">
       <span class="overlay-status"[innerText]="status" [ngStyle]="{'background-color': status == 'LIVE' ? '#e91916' : '#464649'}"></span>
-      <span class="overlay-viewers"[innerText]="viewerString"></span>
+      <span class="overlay-viewers"[innerText]="viewerString" [ngStyle]="{'visibility': status == 'LIVE' ? 'visible' : 'hidden'}"></span>
     </div>
     <img mat-card-image class="twitch-card-thumb" [src]="imageURL">
   </div>
   <mat-card-header>
     <img mat-card-avatar [src]='avatarURL'>
-    <mat-card-title matTooltip={{title}} matTooltipPosition="above" matTooltipShowDelay="500">
+    <mat-card-title matTooltip={{title}} matTooltipPosition="above" matTooltipShowDelay="500" >
       {{ (title.length>30)? (title | slice:0:30)+'...':(title) }}
     </mat-card-title>
     <mat-card-subtitle>{{streamer}}</mat-card-subtitle>

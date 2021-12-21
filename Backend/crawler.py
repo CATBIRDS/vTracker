@@ -40,7 +40,7 @@ def crawl():
     vtuber_storage = {}  # Storage for previous data from file
 
     crawl_start = time.time()
-    with open('Data/vtubers.json', 'w+', encoding='utf-8') as f:
+    with open('../Data/vtubers.json', 'r+', encoding='utf-8') as f:
         try:
             vtuber_storage = json.load(f) # Load previous data from file if it exists
         except json.decoder.JSONDecodeError:
@@ -50,32 +50,43 @@ def crawl():
         while True:
             card.send_keys(Keys.END)  # "Scroll"
             time.sleep(1)  # Wait for page to load
-            cards = driver.find_elements_by_xpath('//a[@data-a-target="preview-card-title-link"]')
+            cards = driver.find_elements_by_xpath('//a[@data-test-selector="preview-card-avatar"]')
             # Break based on time rather than if we have reached the end of the page, because the page has more data than we can hope to scrape
             if time.time() - crawl_start > 300: break  # Stop scraping past five minutes (scraping this way uses exponential resources over time)
             else:
                 for card in cards:
-                    vtubers[card.get_attribute('href').split('/')[-1]] = {'twitch': {}}
-    vtubers = {**vtubers, **vtuber_storage}  # Merge the two dictionaries, with priority given to the file data
-    return vtubers
+                    # find the vtuber's avatar image
+                    thumb = card.find_element_by_xpath('.//img')
+                    vtubers[card.get_attribute('href').split('/')[-1]] = {'twitch': {}, 'thumbnail': thumb.get_attribute('src')}
+    # for each entry in vtubers
+    for vtuber in vtubers:
+        # if vtuber is not in vtuber_storage, add it to the storage
+        if vtuber not in vtuber_storage:
+            vtuber_storage[vtuber] = {'twitch': {}, 'thumbnail': vtubers[vtuber]['thumbnail']}
+        # if vtuber is in vtuber_storage, only add thumbnail if it is not already there
+        elif 'thumbnail' not in vtuber_storage[vtuber]:
+            vtuber_storage[vtuber]['thumbnail'] = vtubers[vtuber]['thumbnail']
+    
+    #vtubers = {**vtubers, **vtuber_storage}  # Merge the two dictionaries, with priority given to the file data
+    return vtuber_storage
 
 # Overwrite the cumulative data file with the new data, making a backup in the process
 def update_file(data):
-    with open(f'Data/vtubers_{time.time()}.json', 'w', encoding='utf-8') as f:  # Save timestamped backup file
+    with open(f'../Data/vtubers_{time.time()}.json', 'w', encoding='utf-8') as f:  # Save timestamped backup file
         json.dump(data, f, ensure_ascii=False, indent=4)
-    with open('Data/vtubers.json', 'w', encoding='utf-8') as f:  # Save cumulative file
+    with open('../Data/vtubers.json', 'w', encoding='utf-8') as f:  # Save cumulative file
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # Upload the cumulative data to specified S3 bucket
 def upload_to_s3():
     s3 = boto3.client('s3')
-    with open('Data/vtubers.json', "rb") as f:  # This is hard-coded only because it is designed to overwrite itself each run
-        s3.upload_fileobj(f, os.environ.get('S3_BUCKET', 'your_bucket_here'), os.path.basename('Data/vtubers.json'), ExtraArgs={'ACL':'public-read'})
+    with open('../Data/vtubers.json', "rb") as f:  # This is hard-coded only because it is designed to overwrite itself each run
+        s3.upload_fileobj(f, os.environ.get('S3_BUCKET', 'your_bucket_here'), os.path.basename('../Data/vtubers.json'), ExtraArgs={'ACL':'public-read'})
 
 # Download the cumulative data from specified S3 bucket
 def download_from_s3():
     s3 = boto3.client('s3')
-    s3.download_file(os.environ.get('S3_BUCKET', 'your_bucket_here'), os.path.basename('Data/vtubers.json'), 'Data/vtubers.json')
+    s3.download_file(os.environ.get('S3_BUCKET', 'your_bucket_here'), os.path.basename('../Data/vtubers.json'), '../Data/vtubers.json')
 
 while True: # Run the crawler every hour
     full_cycle()

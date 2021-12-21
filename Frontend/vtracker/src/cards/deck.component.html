@@ -10,10 +10,10 @@
         {{initStorage().length != 0 ? '' : 'Favorite some vTubers to get started!'}}
       </mat-panel-description>
     </mat-expansion-panel-header>
-    <span>{{initStorage().length != 0 ? '' : 'Favorited vTubers will appear here.'}}</span>
-    <div fxLayout="row wrap" fxLayoutGap="16px grid">
-      <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of initStorage()">
-        <pm-card
+    <span class='empty'>{{initStorage().length != 0 ? '' : 'Favorited vTubers will appear here.'}}</span>
+    <div  fxLayout="row wrap" fxLayoutGap="16px grid">
+      <div fxFlex="33%" *ngFor="let card of initStorage()">
+        <pm-card 
         [imageURL]="parseFavorite(card, 'thumbnail_url').replace('{width}', '440').replace('{height}', '248')"
         [title]="parseFavorite(card, 'title')"
         [streamer]="parseFavorite(card, 'user_name')"
@@ -68,14 +68,17 @@
     (page)="pageEvent = $event"
     aria-label="Select page">
   </mat-paginator>
-  <div fxLayout="row wrap" fxLayoutGap="16px grid">
+  <div fxLayout="row wrap" fxLayoutGap="16px grid" [ngStyle]="{'min-height':'100%'}">
     <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of noPipe(
       pageEvent.pageIndex == undefined ? 0 : pageEvent.pageIndex*pageEvent.pageSize, 
       pageEvent.pageIndex == undefined ? pageSize : (pageEvent.pageIndex*pageEvent.pageSize)+pageEvent.pageSize, 
       tags)">
+
+      <!-- Card -->
+      <!-- avatarURL favicon fallback should be considered a temporary measure while migrating to the new crawler method and removed at a later date -->
       <pm-card
-      
       [imageURL]="card['twitch']['thumbnail_url'].replace('{width}', '440').replace('{height}', '248')"
+      [avatarURL]="card['thumbnail'] != undefined ? card['thumbnail'] : 'https://static.twitchcdn.net/assets/favicon-32-e29e246c157142c94346.png'"
       [title]="card['twitch']['title']"
       [streamer]="card['twitch']['user_name'].toLowerCase() == card['twitch']['user_login'] ? card['twitch']['user_name'] : card['twitch']['user_name'] +  ' (' + card['twitch']['user_login'] + ')' "
       [streamURL]="'https://www.twitch.tv/' + card['twitch']['user_login']"
