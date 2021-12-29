@@ -3,15 +3,23 @@
     <div class="overlay" (click)="jsLink(streamURL);">
       <span class="overlay-status"[innerText]="status" [ngStyle]="{'background-color': status == 'LIVE' ? '#e91916' : '#464649'}"></span>
       <span class="overlay-viewers"[innerText]="viewerString" [ngStyle]="{'visibility': status == 'LIVE' ? 'visible' : 'hidden'}"></span>
+      <span class="overlay-mature"[ngStyle]="{'visibility': mature === true ? 'visible' : 'hidden'}">18+</span>
     </div>
-    <img mat-card-image class="twitch-card-thumb" [src]="imageURL">
+    <img mat-card-image [ngClass]="this.shouldBlur() ? 'twitch-card-thumb-blur' : 'twitch-card-thumb'" [src]="imageURL">
   </div>
   <mat-card-header>
     <img mat-card-avatar [src]='avatarURL'>
     <mat-card-title matTooltip={{title}} matTooltipPosition="above" matTooltipShowDelay="500" >
-      {{ (title.length>30)? (title | slice:0:30)+'...':(title) }}
+      {{ (title.length>40)? (title | slice:0:40)+'...':(title) }}
     </mat-card-title>
     <mat-card-subtitle>{{streamer}}</mat-card-subtitle>
+    <mat-card-subtitle 
+    [ngStyle]="{'visibility': status == 'LIVE' ? 'visible' : 'hidden'}"
+    matTooltip={{game}} matTooltipPosition="above" matTooltipShowDelay="500">
+      <button class="fake-link" (click)="tagClick(game)">
+        {{ (game.length>40)? (game | slice:0:40)+'...':(game) }}
+      </button>
+    </mat-card-subtitle>
   </mat-card-header>
   <mat-card-content>
     <mat-chip-list>

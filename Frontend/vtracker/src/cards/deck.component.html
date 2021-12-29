@@ -31,10 +31,14 @@
   </mat-expansion-panel>
 
   <!-- Main -->
-  <mat-toolbar>All vTubers</mat-toolbar>
-
+  <mat-toolbar>
+    All vTubers
+    <span class="toolbar-spacer"></span>
+    <mat-slide-toggle [checked]="blurMature" [(ngModel)]="blurMature" (change)="toggleMature($event)">Hide 18+ Streams</mat-slide-toggle>
+  </mat-toolbar>
+  
   <mat-form-field class="tag-chip-list" appearance="fill">
-    <mat-label>Filter by tags</mat-label>
+    <mat-label>Filter by tag or name</mat-label>
     <mat-chip-list #chipList aria-label="tag selection">
       <mat-chip
         *ngFor="let tag of tags"
@@ -46,7 +50,7 @@
       </mat-chip>
       <input
         [formControl]="tagCtrl"
-        placeholder="New tag..."
+        placeholder="{{placeholder}}"
         [matAutocomplete]="auto"
         [matChipInputFor]="chipList"
         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
@@ -61,13 +65,19 @@
     </mat-autocomplete>
   </mat-form-field>
 
-  <mat-paginator 
-    [length]="noPipe(0,0,tags).length"
-    [pageSize]="pageSize"
-    [pageSizeOptions]="pageSizeOptions"
-    (page)="pageEvent = $event"
-    aria-label="Select page">
-  </mat-paginator>
+  <mat-toolbar>
+    <button mat-raised-button color="primary" (click)="newTab('https://twitch.tv/' + randomVtuber(noPipe(0, 0, tags)))">
+      I'm Feeling Lucky
+    </button>
+    <span class="toolbar-spacer"></span>
+    <mat-paginator 
+      [length]="noPipe(0,0,tags).length"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="pageSizeOptions"
+      (page)="pageEvent = $event"
+      aria-label="Select page">
+    </mat-paginator>
+  </mat-toolbar>
   <div fxLayout="row wrap" fxLayoutGap="16px grid" [ngStyle]="{'min-height':'100%'}">
     <div fxFlex="25%" fxFlex.sm="33%" fxFlex.xs="100%" *ngFor="let card of noPipe(
       pageEvent.pageIndex == undefined ? 0 : pageEvent.pageIndex*pageEvent.pageSize, 
@@ -77,7 +87,10 @@
       <!-- Card -->
       <!-- avatarURL favicon fallback should be considered a temporary measure while migrating to the new crawler method and removed at a later date -->
       <pm-card
+      [blurMature]="blurMature"
+      [mature]="card['twitch']['is_mature']"
       [imageURL]="card['twitch']['thumbnail_url'].replace('{width}', '440').replace('{height}', '248')"
+      [game]="card['twitch']['game_name']"
       [avatarURL]="card['thumbnail'] != undefined ? card['thumbnail'] : 'https://static.twitchcdn.net/assets/favicon-32-e29e246c157142c94346.png'"
       [title]="card['twitch']['title']"
       [streamer]="card['twitch']['user_name'].toLowerCase() == card['twitch']['user_login'] ? card['twitch']['user_name'] : card['twitch']['user_name'] +  ' (' + card['twitch']['user_login'] + ')' "
@@ -90,7 +103,9 @@
       [tags]="tagStrip(card['twitch']['tag_ids'])"
       [favorite]="checkFavorite(card['twitch']['user_login'])"
       (addTag)="manualAdd($event)"
+      
       ></pm-card>
     </div>
   </div>
 </div>
+<pm-footer></pm-footer>

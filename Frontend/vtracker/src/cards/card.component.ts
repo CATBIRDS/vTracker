@@ -17,12 +17,15 @@ export class CardComponent {
   @Input() streamURL: string;
   @Input() streamerURL: string;
   @Input() avatarURL: string;
+  @Input() game: string;
   @Input() tags: Array<string>;
   @Input() viewers: number;
   @Input() viewerString: string;
   @Input() status: string;
   @Input() buttonString: string;
   @Input() favorite: boolean;
+  @Input() mature: boolean;
+  @Input() blurMature: boolean;
 
   // Received parent functions
   @Output() addTag = new EventEmitter<string>();
@@ -34,12 +37,15 @@ export class CardComponent {
     this.streamURL = 'https://www.twitch.tv/shiba_inu';
     this.streamerURL = 'shiba_inu';
     this.avatarURL = 'https://material.angular.io/assets/img/examples/shiba1.jpg';
+    this.game = 'VALORANT';
     this.tags = ['English', 'Esport', 'Valorant'];
     this.viewers = 0;
     this.viewerString = '';
     this.status = 'OFFLINE';
     this.buttonString = 'View Channel on Twitch';
     this.favorite = false;
+    this.mature = false;
+    this.blurMature = false;
   }
 
   tagMap = new Map(Object.entries(tagJSON));
@@ -50,6 +56,15 @@ export class CardComponent {
 
   humanizeTag(tag: string) {
     return this.tagMap.get(tag);
+  }
+
+  shouldBlur(){
+    if(this.mature && this.blurMature){
+      return true;
+    }
+    else {
+      return false;
+    }
   }
 
   toggleFavorite(input: string){

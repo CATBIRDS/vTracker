@@ -21,8 +21,7 @@ export class DeckComponent {
 
   tagMap = new Map(Object.entries(tagJSON));
 
-  private dataurl = 'https://vtrackerbucket.s3.us-east-2.amazonaws.com/vtubers.json';
-  private histurl = 'https://vtrackerbucket.s3.us-east-2.amazonaws.com/history.json';
+  placeholder = 'e.g. ';
 
   public favoritesArray = this.initStorage();
   public favoritesDict: any = [];
@@ -40,6 +39,8 @@ export class DeckComponent {
   private live: any = [];
   private dead: any = [];
   public vtuberDict: any = [];
+
+  public blurMature: boolean = this.initMature();
 
   constructor(private vtubers: vtuberService, public pageEvent: PageEvent, public tagInput: ElementRef<HTMLInputElement>) {
     
@@ -64,6 +65,9 @@ export class DeckComponent {
     event.chipInput!.clear();
 
     this.tagCtrl.setValue(null);
+
+    // Set a new placeholder now that we've entered some text
+    this.placeholder = this.randomTag();
   }
 
   manualAdd(input: string){ 
@@ -73,10 +77,24 @@ export class DeckComponent {
       if (!this.tags.includes(temp)) {
         this.tags.push(temp);
       }
-      else {
+      else {        
         this.tags.splice(this.tags.indexOf(temp), 1);
       }
     }
+    else {
+      // If the tag is not in the map, but also is not simply an invalid GUID, then it is a pseudo-tag, likely a game title - add it.
+      if (!input.match(/^[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}$/)) {
+        if (!this.tags.includes(input)) {
+          this.tags.push(input);
+        }
+        else {        
+          this.tags.splice(this.tags.indexOf(input), 1);
+        }
+      }
+    }
+    
+    // Once more, change up the placeholder text
+    this.placeholder = this.randomTag();
   }
 
   remove(tag: string): void {
@@ -85,6 +103,9 @@ export class DeckComponent {
     if (index >= 0) {
       this.tags.splice(index, 1);
     }
+
+    // As with add(), change up the placeholder text
+    this.placeholder = this.randomTag();
   }
 
   selected(event: MatAutocompleteSelectedEvent): void {
@@ -97,36 +118,42 @@ export class DeckComponent {
     const filterValue = value.toLowerCase();
     
     return this.alltags.filter(tag => tag.toLowerCase().includes(filterValue));
+  }  
+
+  randomTag() {
+    return 'e.g. ' + this.alltags[Math.floor(Math.random() * this.alltags.length)];
   }
 
-  tagMatch(input: Array<string>){
-    if(this.tags.length == 0) {
-      return true;
+  newTab(url: string){
+    window.open(url, '_blank');
+  }
+
+  randomVtuber(vtubers: any) {
+    let random = vtubers[Math.floor(Math.random() * vtubers.length)];
+    while(random['twitch']['type'] != 'live'){
+      random = vtubers[Math.floor(Math.random() * vtubers.length)];
     }
-    let humanizedTags: Array<string> = [];
-    for (let tag of input) {
-      let temp = this.tagMap.get(tag);
-      if (temp) {
-        humanizedTags.push(temp);
-      }
-    }
-    for (let tag of this.tags) {
-      if (!humanizedTags.includes(tag)) {
-        return false
-      }
-    }
-    return true;
+    return random['twitch']['user_login'];
   }
 
   noPipe(start: number | undefined, end: number, filter: Array<string>) {
-    if (filter.length == 0) {
-      if (end == 0) {
-        return this.vtuberDict;
-      }
-      return this.vtuberDict.slice(start, end);
-    }
     let result: any = [];
-
+    if (filter.length == 0) {
+      // Even if there is no filter, we still need to hide 18+ vtubers if the user has turned off mature content
+      for (let vtuber of this.vtuberDict) {
+        if (this.blurMature && vtuber['twitch']['is_mature'] === true) {
+          continue;
+        }
+        else {
+          result.push(vtuber);
+        }
+      }
+      if (end == 0) {
+        return result;
+      }
+      return result.slice(start, end);
+    }
+    
     // if any tag in vtuber['twitch']['tag_ids'] does not match any tag in filter, skip
     for (let vtuber of this.vtuberDict) {
       let match = true;
@@ -143,12 +170,28 @@ export class DeckComponent {
             humanizedTags.push(temp.toLowerCase());
           }
         }
+
+        // include current game as a pseudo-tag to allow users to filter by game
+        if (vtuber['twitch']['game_name'] && vtuber['twitch']['type'] === 'live') {
+          humanizedTags.push(vtuber['twitch']['game_name'].toLowerCase());
+        }
+
         // if all tags in filter are in humanizedTags, match = true
         for (let tag of filter) {
           if (!humanizedTags.includes(tag.toLowerCase())) {
             match = false;
           } 
         }
+        // if the 'tag' fuzzy matches the vtuber's name, override and match = true
+        if (vtuber['twitch']['user_login'].toLowerCase().includes(filter[0].toLowerCase()) || vtuber['twitch']['user_name'].toLowerCase().includes(filter[0].toLowerCase())) {
+          match = true;
+        }
+
+        // Finally, override all matches if the vtuber is set to 'mature' and the user has not chosen to show mature
+        if (this.blurMature && vtuber['twitch']['is_mature'] === true) {
+          match = false;
+        }
+
         if (match) {
           result.push(vtuber);
         }
@@ -191,6 +234,29 @@ export class DeckComponent {
     else {
       return JSON.parse(favorites);
     }
+  }
+
+  initMature(){
+    let mature = localStorage.getItem('mature');
+    if (mature == null) {
+      return true;
+    }
+    else {
+      if (mature === 'true'){
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+  }
+
+  toggleMature(event: any){
+    localStorage.setItem('mature', event.checked.toString());
+  }
+
+  setMature(flag: boolean){
+    localStorage.setItem('mature', flag.toString());
   }
 
   checkFavorite(input: string){
@@ -268,7 +334,7 @@ export class DeckComponent {
 
   ngOnInit() {
     this.listStreamers();
-    
+    this.placeholder = this.randomTag();
   }
 
 }

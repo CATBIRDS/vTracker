@@ -1,6 +1,5 @@
 # This is the function that will be deployed to AWS Lambda.
 # Every ten minutes, it grabs the vtuber information from our public AWS S3 bucket and makes API calls to the Twitch API to get the stream information.
-import copy
 import os
 import boto3
 from botocore.exceptions import ClientError
@@ -10,11 +9,30 @@ from json.decoder import JSONDecodeError
 import time
 import datetime
 
-try:
-    import env
-except ImportError:
-    print('No env file found when starting crawler. Using fallback methods.')
-    pass
+# History that does not include the current month
+generic_history = {
+    'instances' : 0,
+    'daily_view_avg' : [0]*31,
+    'monthly_view_avg' : 0,
+    'daily_time' : [0]*31,
+    'monthly_time_avg' : 0,
+}
+
+# enums for the days in a month
+MONTH_DAYS = {
+    1: 31,
+    2: 28,
+    3: 31,
+    4: 30,
+    5: 31,
+    6: 30,
+    7: 31,
+    8: 31,
+    9: 30,
+    10: 31,
+    11: 30,
+    12: 31,
+}
 
 # Downloads and returns arbitrary file from S3 bucket
 def download_from_s3(data):
@@ -34,61 +52,19 @@ def upload_to_s3(data, filename):
     # Conversion to bytes, operating under the assumption that the data is json
     string = json.dumps(data)
     binary = bytearray(string, 'utf-8')
-    s3.put_object(Bucket=os.environ.get('S3_BUCKET', 'your_bucket_here'), Key=filename, Body=binary)
+    s3.put_object(Bucket=os.environ.get('S3_BUCKET', 'your_bucket_here'), Key=filename, Body=binary, ACL='public-read')
 
-# Creates history template for current year and month
+# Creates history template for current month
 def create_history():
-    import time
-    history = {time.strftime('%Y'): {
-                    time.strftime('%B') : {
-                        'instances' : 0,
-                        'daily_view_avg' : [0]*31,
-                        'monthly_view_avg' : 0,
-                        'daily_time' : [0]*31,
-                        'monthly_time_avg' : 0,
-                    },
-                }
-            }
-    return history
-
-# Get history file from S3
-def update_history(vtubers, last_online):
-    try:
-        history = json.load(download_from_s3('history.json'))
-    except (JSONDecodeError, AttributeError) as e:
-        history = {}
-        history_template = create_history()
-        for vtuber in vtubers:
-            history[vtuber] = history_template
-
-    for vtuber in vtubers:
-        if 'type' in vtubers[vtuber]['twitch']:
-            current_history = copy.deepcopy(history[vtuber])
-            if vtubers[vtuber]['twitch']['type'] == 'live':
-                # Check that the history file is set up for the current year and month
-                if time.strftime('%Y') not in history[vtuber] or time.strftime('%B') not in history[vtuber][time.strftime('%Y')]:
-                    history[vtuber][time.strftime('%Y')] = create_history()
-                year = time.strftime('%Y')
-                month = time.strftime('%B')
-                day = int(time.strftime('%d'))
-                current_history[year][month]['instances'] += 1
-                # If the current value of the daily view average is zero, set instance to 1, as this is the first time the vtuber has been online today
-                if current_history[year][month]['daily_view_avg'][day-1] == 0:
-                    current_history[year][month]['instances'] = 1
-                current_viewers = vtubers[vtuber]['twitch']['viewer_count']
-                daily_avg = history[vtuber][year][month]['daily_view_avg'][day]
-                instance = current_history[year][month]['instances']
-                # Calculate the daily and monthly average viewer count
-                current_history[year][month]['daily_view_avg'][day-1] = ((daily_avg * (instance -1)) + current_viewers) / instance
-                current_history[year][month]['monthly_view_avg'] = sum(current_history[year][month]['daily_view_avg'][0:day]) / day
-            # If the vtuber's name is in the last_online list and is not currently online, their stream ended within the past 5 minutes
-            if vtubers[vtuber]['twitch']['user_login'] in last_online and vtubers[vtuber]['twitch']['type'] != 'live':
-                # Calculate their stream length using the started_at timestamp compared to the current time using time.time()
-                stream_length = (datetime.datetime.now() - datetime.datetime.strptime(vtubers[vtuber]['twitch']['started_at'], '%Y-%m-%dT%H:%M:%SZ')).total_seconds()
-                # Add the stream length to the daily and monthly stream time
-                current_history[year][month]['daily_stream_time'][day-1] += stream_length
-                current_history[year][month]['monthly_stream_time'] += stream_length
-            history[vtuber] = current_history
+    history = {
+        time.strftime('%B') : {
+            'instances' : 0,
+            'daily_view_avg' : [0]*31,
+            'monthly_view_avg' : 0,
+            'daily_time' : [0]*31,
+            'monthly_time_avg' : 0,
+        },
+    }
     return history
 
 # Validates token and refreshes if needed
@@ -120,8 +96,104 @@ def call(chunk, auth):
     payload = {'user_login': chunk}
     return requests.get(url, params=payload, headers=auth)
 
+def reset_twitch(vtubers):
+    last_online = set()
+    # For each vtuber, if they are online, add them to the last_online set, then set their status to offline
+    for vtuber in vtubers:
+        if 'type' in vtubers[vtuber]['twitch']:
+            if vtubers[vtuber]['twitch']['type'] == 'live':
+                last_online.add(vtubers[vtuber]['twitch']['user_login'])
+                vtubers[vtuber]['twitch']['type'] = ''
+    return last_online
+
+def update_history(vtubers, last_online):
+    try:
+        history = json.load(download_from_s3('history.json'))
+    except (JSONDecodeError, AttributeError) as e:
+        history = {}
+    history_template = create_history()
+    
+    # If the history file is empty, then we need to create empty history for each vtuber
+    if not history:
+        for vtuber in vtubers:
+            history[vtuber] = {time.strftime('%Y') : history_template}
+    
+    # If not empty, we need to update it
+    else:
+        # Variables
+        year = time.strftime('%Y')
+        month = time.strftime('%B')
+        month_int = int(time.strftime('%m'))
+        day = int(time.strftime('%d'))
+        for vtuber in vtubers:
+            # If our vtuber is freshly added and also offline, they will not have a valid twitch API response to work with, and no history to update.
+            if not vtubers[vtuber]['twitch']:
+                # Skip this vtuber
+                continue
+            # If the current vtuber is not in history, add it and create empty history for the current year and month
+            if vtuber not in history:
+                history[vtuber] = {year : history_template}
+            # If the current vtuber is in history, but the current year is not, add it and create empty history for the current year and month
+            elif year not in history[vtuber]:
+                history[vtuber][year] = history_template
+            # If the current vtuber is in history, the current year is in history, but the current month is not, add it and create empty history for the current month
+            elif month not in history[vtuber][year]:
+                history[vtuber][year][month] = generic_history
+            # If we've passed all previous checks, then our vtuber has a valid history entry, and we simply need to update it
+            else:
+                # Update the 'instances' value
+                history[vtuber][year][month]['instances'] += 1
+                # If the current value of the daily view average is zero, set instance to 1, as this is the first time the vtuber has been online today
+                if history[vtuber][year][month]['daily_view_avg'][day-1] == 0:
+                    history[vtuber][year][month]['instances'] = 1
+                # Update the 'daily_view_avg' value
+                current_viewers = vtubers[vtuber]['twitch']['viewer_count']
+                daily_avg = history[vtuber][year][month]['daily_view_avg'][day-1]
+                instance = history[vtuber][year][month]['instances']
+                history[vtuber][year][month]['daily_view_avg'][day-1] = ((daily_avg * (instance -1)) + current_viewers) / instance
+                # Update the 'monthly_view_avg' value
+                history[vtuber][year][month]['monthly_view_avg'] = sum(history[vtuber][year][month]['daily_view_avg'][0:day-1]) / day
+                # Update the 'daily_time' value - this is only updated after a vtuber completes a stream
+                if vtubers[vtuber]['twitch']['user_login'] in last_online and vtubers[vtuber]['twitch']['type'] != 'live':
+                    # If the last stream began and ended today, update as normal
+                    if time.strftime('%Y-%m-%d') == vtubers[vtuber]['twitch']['started_at'][:10]:
+                        stream_length = (datetime.datetime.now() - datetime.datetime.strptime(vtubers[vtuber]['twitch']['started_at'], '%Y-%m-%dT%H:%M:%SZ')).total_seconds()
+                        history[vtuber][year][month]['daily_time'][day-1] += stream_length
+                        history[vtuber][year][month]['monthly_time_avg'] = sum(history[vtuber][year][month]['daily_time'][0:day-1]) / day
+                    # If the last stream took place over multiple days, we need to do some math
+                    else:
+                        # Determine the starting and ending date of the stream, then calculate the stream length
+                        stream_start = datetime.datetime.strptime(vtubers[vtuber]['twitch']['started_at'], '%Y-%m-%dT%H:%M:%SZ')
+                        stream_end = datetime.datetime.now()
+                        stream_length = (stream_end - stream_start).days
+                        # Create a list of datetime objects representing the days the vtuber streamed
+                        stream_days = [stream_start + datetime.timedelta(days=x) for x in range(0, stream_length)]
+                        # For each day the vtuber streamed, determine how long the stream lasted on that day, and update the appropriate daily_stream_time value
+                        for date in stream_days:
+                            # If the day is the first day of the stream, we need to calculate the stream length from the start of the stream to the end of the day
+                            if date == stream_start:
+                                stream_length = (datetime.datetime.combine(date, datetime.time.max) - stream_start).total_seconds()
+                            # Same as before, but for the last day of the stream
+                            elif date == stream_end:
+                                stream_length = (stream_end - datetime.datetime.combine(date, datetime.time.min)).total_seconds()
+                            # If it's neither the first nor last day, but we know they continuously streamed before and after, they must have streamed for 24hrs
+                            else:
+                                stream_length = 86400
+                                history[vtuber][str(date.year)][date.strftime("%B")]['daily_time'][date.day-1] += stream_length
+                            # If the day is in the current month, add the difference between the day and now to the average division formula
+                            if date.month == month_int:
+                                stream_days = (datetime.datetime.now() - date).days
+                                history[vtuber][str(date.year)][date.strftime("%B")]['monthly_time_avg'] = \
+                                    sum(history[vtuber][str(date.year)][date.strftime("%B")]['daily_time'][0:date.day-1]) / day + stream_days
+                            # If the day is NOT in the current month, then the full month has already passed, and we can use MONTH_DAYS for the formula
+                            else:
+                                history[vtuber][str(date.year)][date.strftime("%B")]['monthly_time_avg'] = \
+                                    sum(history[vtuber][str(date.year)][date.strftime("%B")]['daily_time'][0:date.day-1]) / MONTH_DAYS[date.month]
+    return history
+                    
+                
+
 # Lambda handler to be called via AWS Lambda - validates token, calls API, updates stream and history data, then uploads to S3
-# This function doesn't actually care about the event or context, but it's required to be passed regardless
 def lambda_handler(event, context):
     # Validate token
     auth = validate_token()
@@ -131,14 +203,8 @@ def lambda_handler(event, context):
     except JSONDecodeError:
         vtubers = {}
 
-    # Reset all vtubers to 'offline' - we will revert them as determined by the API call
-    last_online = set()
-    for vtuber in vtubers:
-        if 'type' in vtubers[vtuber]['twitch']:
-            # If the vtuber was last seen online, mark their name in a list so we can calculate how long their stream lasted +/- 5 min
-            if vtubers[vtuber]['twitch']['type'] == 'online':
-                last_online.add(vtubers[vtuber]['twitch']['login_name'])
-            vtubers[vtuber]['twitch']['type'] = ''  # Reset the vtuber's status to 'offline'
+    # Determine who was last online, updating twitch data as needed and updating user with absent information
+    last_online = reset_twitch(vtubers)
     
     # Extract the primary keys from the vtubers list
     vtuber_keys = [key for key in vtubers.keys()]
@@ -153,6 +219,7 @@ def lambda_handler(event, context):
             for item in data['data']:
                 vtubers[item['user_login']]['twitch'] = item
         else: # API call failed, probably due to hitting the rate limit. This should theoretically never happen due to our update cycle timings.
+            print('API call failed with status code ' + str(response.status_code))
             break
     
     # Update the history file using updated vtuber data
@@ -162,4 +229,4 @@ def lambda_handler(event, context):
     upload_to_s3(vtubers, 'vtubers.json')
     upload_to_s3(history, 'history.json')
 
-
+lambda_handler(None, None)
