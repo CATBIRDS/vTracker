@@ -27,16 +27,28 @@
     margin-bottom: 16px;
 }
 
+.bright {
+    color: #fff;
+}
+
 a:link {
-    color: #efefefcc;
+    color: #fff;
+}
+
+a.dark-orange:link {
+    color: #ffffff80;
 }
 
 a:active {
     filter: brightness(0.5);
 }
 
+a.dark-orange:active {
+    color: #ffffff80;
+}
+
 a:visited {
-    color: #efefefcc;
+    color: #fff;
 }
 
 a:hover {
@@ -45,4 +57,32 @@ a:hover {
     animation-duration: 2s;
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite; 
+}
+
+a.orange:hover, a.dark-orange:hover {
+    color: #f68f06;
+}
+
+
+
+.fake-link {
+    font-family: 'Inter', sans-serif;
+    font-size: 8.0pt;
+    color: #fff;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.fake-link:hover {
+    color: #f68f06;
+    animation-name: flicker;
+    animation-duration: 2s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite; 
+}
+
+.fake-link:active {
+    filter: brightness(0.5);
 }

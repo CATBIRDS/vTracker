@@ -1,13 +1,14 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
-import {COMMA, ENTER} from '@angular/cdk/keycodes';
+import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { vtuberService } from 'src/api/service';
-import {PageEvent} from '@angular/material/paginator';
-import {Form, FormControl} from '@angular/forms';
-import {MatAutocompleteSelectedEvent} from '@angular/material/autocomplete';
-import {MatChipInputEvent} from '@angular/material/chips';
+import { PageEvent  } from '@angular/material/paginator';
+import { FormControl } from '@angular/forms';
+import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import { MatChipInputEvent } from '@angular/material/chips';
 import * as tagJSON from '../assets/json/tags.json';
-import {Observable} from 'rxjs';
-import {map, startWith} from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map, startWith } from 'rxjs/operators';
+import { sortAndDeduplicateDiagnostics } from 'typescript';
 
 
 @Component({
@@ -41,6 +42,7 @@ export class DeckComponent {
   public vtuberDict: any = [];
 
   public blurMature: boolean = this.initMature();
+  public hideOffline: boolean = this.initOffline();
 
   constructor(private vtubers: vtuberService, public pageEvent: PageEvent, public tagInput: ElementRef<HTMLInputElement>) {
     
@@ -156,6 +158,7 @@ export class DeckComponent {
     
     // if any tag in vtuber['twitch']['tag_ids'] does not match any tag in filter, skip
     for (let vtuber of this.vtuberDict) {
+      
       let match = true;
       // if not iterable
       if (!Array.isArray(vtuber['twitch']['tag_ids'])) {
@@ -164,6 +167,7 @@ export class DeckComponent {
       else {
         // make new array of tags by mapping tag_ids to tagMap
         let humanizedTags: Array<string> = [];
+        
         for (let tag of vtuber['twitch']['tag_ids']) {
           let temp = this.tagMap.get(tag);
           if (temp) {
@@ -182,13 +186,13 @@ export class DeckComponent {
             match = false;
           } 
         }
-        // if the 'tag' fuzzy matches the vtuber's name, override and match = true
+        // if the 'tag' fuzzy matches the vtuber's name, force match = true
         if (vtuber['twitch']['user_login'].toLowerCase().includes(filter[0].toLowerCase()) || vtuber['twitch']['user_name'].toLowerCase().includes(filter[0].toLowerCase())) {
           match = true;
         }
 
-        // Finally, override all matches if the vtuber is set to 'mature' and the user has not chosen to show mature
-        if (this.blurMature && vtuber['twitch']['is_mature'] === true) {
+        // Finally, override all matches if the vtuber is set to 'mature' and the user has not chosen to show mature, OR if they lack the hidden 'vtuber' tag
+        if ( ( this.blurMature && vtuber['twitch']['is_mature'] === true ) || !humanizedTags.includes('vtuber') ) {
           match = false;
         }
 
@@ -206,24 +210,31 @@ export class DeckComponent {
 
   // LocalStorage Functions
 
+  nuke() {
+    localStorage.clear();
+  }
+
   parseFavorite(input: string, parameter: string){
-    for (let vtuber in this.vtuberDict) {
-      if (this.vtuberDict[vtuber]['twitch']['user_login'] == input) {
+    let match = false;
+    for(let vtuber in this.vtuberDict){
+      if(this.vtuberDict[vtuber]['twitch']['user_login'] == input){
+        match = true;
         switch(parameter) {
+          case 'exists':
+            return true;
           case 'user_name':
-            return this.vtuberDict[vtuber]['twitch']['user_name'].toLowerCase() == 
-              this.vtuberDict[vtuber]['twitch']['user_login'] ? 
-              this.vtuberDict[vtuber]['twitch']['user_name'] : 
-              this.vtuberDict[vtuber]['twitch']['user_name'] +  ' (' + this.vtuberDict[vtuber]['twitch']['user_login'] + ')'
+            return this.vtuberDict[input]['twitch']['user_name'].toLowerCase() == 
+              this.vtuberDict[input]['twitch']['user_login'] ? 
+              this.vtuberDict[input]['twitch']['user_name'] : 
+              this.vtuberDict[input]['twitch']['user_name'] +  ' (' + this.vtuberDict[input]['twitch']['user_login'] + ')'
           case 'viewer_string':
-            return this.vtuberDict[vtuber]['twitch']['viewer_count'] == 0 ? '' : 
-              this.numberStringFormat(this.vtuberDict[vtuber]['twitch']['viewer_count']) + ' viewers'
+            return this.vtuberDict[input]['twitch']['viewer_count'] == 0 ? '' : 
+              this.numberStringFormat(this.vtuberDict[input]['twitch']['viewer_count']) + ' viewers'
           default:
-            return this.vtuberDict[vtuber]['twitch'][parameter];
+            return this.vtuberDict[input]['twitch'][parameter];
         }
       }
     }
-    return "error";
   }
 
   initStorage(){
@@ -231,9 +242,7 @@ export class DeckComponent {
     if (favorites == null) {
       return [];
     }
-    else {
-      return JSON.parse(favorites);
-    }
+    return JSON.parse(favorites);
   }
 
   initMature(){
@@ -251,12 +260,29 @@ export class DeckComponent {
     }
   }
 
+  initOffline(){
+    let offline = localStorage.getItem('offline');
+    if (offline == null) {
+      return true;
+    }
+    else {
+      if (offline === 'true'){
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+  }
+
   toggleMature(event: any){
     localStorage.setItem('mature', event.checked.toString());
   }
 
-  setMature(flag: boolean){
-    localStorage.setItem('mature', flag.toString());
+  toggleOffline(event: any){
+    localStorage.setItem('offline', event.checked.toString());
+    // Clear the cache when offline mode is toggled
+    this.listStreamers();
   }
 
   checkFavorite(input: string){
@@ -286,44 +312,87 @@ export class DeckComponent {
 
   tagStrip(input: Array<string>){
     let vGUID = '52d7e4cc-633d-46f5-818c-bb59102d9549'; // Manually added GUID for Vtuber Tag
-    let filtered = input.filter(e => e !== vGUID);
-    return filtered;
+    //let filtered = input.filter(e => e !== vGUID);
+    return input;
   }
   
   listStreamers() {
-    this.vtubers.getData().toPromise().then(data => {
-      let temp: any = data;
-      for (let streamer in temp) {
+    this.live = [];
+    this.dead = [];
+    let tempDict: any = [];
+    let offline = this.initOffline();
+    // If 'offline' is True, then we have elected to HIDE offline streamers, meaning we should grab data from live.json
+    if(offline) {
+      this.vtubers.getData().toPromise().then(data => {
+        let temp: any = data;
+        for (let streamer in temp) {
+          // Push Live Streamers
+          if (temp[streamer]['twitch']['type'] == 'live') {
+            if (temp[0] != undefined && temp[streamer]['twitch']['viewer_count'] > temp[0]['twitch']['viewer_count']) {
+              this.live.ushift(temp[streamer]);
+            }
+            else {
+              this.live.push(temp[streamer]);
+            }
+          }   
+          
+          // Push Offline Streamers (TODO)
+          else this.dead.push(temp[streamer])
+        }
+  
+        // Sort live by Viewer Count
+        this.live.sort((a: any, b: any) => {
+          return b.twitch.viewer_count - a.twitch.viewer_count;
+        });
+  
+        // Add live to vtuberDict, then add dead to vtuberDict
+        for (let streamer in this.live) {
+          tempDict.push(this.live[streamer]);
+        }
+        for (let streamer in this.dead) {
+          tempDict.push(this.dead[streamer]);
+        }
 
-        // Push Live Streamers
-        if (temp[streamer]['twitch']['type'] == 'live') {
-          if (temp[0] != undefined && temp[streamer]['twitch']['viewer_count'] > temp[0]['twitch']['viewer_count']) {
-            this.live.ushift(temp[streamer]);
-          }
-          else {
-            this.live.push(temp[streamer]);
-          }
-        }   
-        
-        // Push Offline Streamers (TODO)
-        else this.dead.push(temp[streamer])
-      }
-
-      // Sort live by Viewer Count
-      this.live.sort((a: any, b: any) => {
-        return b.twitch.viewer_count - a.twitch.viewer_count;
+        this.vtuberDict = tempDict;
+  
       });
+    }
+    else {
+      this.vtubers.getMaster().toPromise().then(data => {
+        let temp: any = data;
+        for (let streamer in temp) {
+  
+          // Push Live Streamers
+          if (temp[streamer]['twitch']['type'] == 'live') {
+            if (temp[0] != undefined && temp[streamer]['twitch']['viewer_count'] > temp[0]['twitch']['viewer_count']) {
+              this.live.ushift(temp[streamer]);
+            }
+            else {
+              this.live.push(temp[streamer]);
+            }
+          }   
+          
+          // Push Offline Streamers (TODO)
+          else this.dead.push(temp[streamer])
+        }
+  
+        // Sort live by Viewer Count
+        this.live.sort((a: any, b: any) => {
+          return b.twitch.viewer_count - a.twitch.viewer_count;
+        });
+  
+        // Add live to vtuberDict, then add dead to vtuberDict
+        for (let streamer in this.live) {
+          tempDict.push(this.live[streamer]);
+        }
+        for (let streamer in this.dead) {
+          tempDict.push(this.dead[streamer]);
+        }
 
-      // Add live to vtuberDict, then add dead to vtuberDict
-      for (let streamer in this.live) {
-        this.vtuberDict.push(this.live[streamer]);
-      }
-      for (let streamer in this.dead) {
-        this.vtuberDict.push(this.dead[streamer]);
-      }
-
-    });
-    
+        this.vtuberDict = tempDict;
+  
+      });
+    }
   }
 
   numberStringFormat(input: string){

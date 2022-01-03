@@ -1,56 +1,85 @@
-<mat-toolbar>
-    <mat-toolbar-row>
-        <span>{{pageTitle}}</span>
-    </mat-toolbar-row>
-    <mat-toolbar-row>
-        <span>Compare:</span>
-    </mat-toolbar-row>
-</mat-toolbar>
+<div class='analytics-container'>
+    <mat-toolbar>
+        <mat-toolbar-row>
+            <span>{{pageTitle}}</span>
+        </mat-toolbar-row>
+    </mat-toolbar>
+    <mat-form-field class="tag-chip-list" appearance="fill" >
+        <mat-label>Add VTubers for comparison...</mat-label>
+        <mat-chip-list #chipList aria-label="tag selection">
+          <mat-chip
+            *ngFor="let tag of tags"
+            (removed)="remove(tag)">
+            {{tag}}
+            <button matChipRemove>
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip>
+          <input
+            [formControl]="tagCtrl"
+            [@error]="tagError"
+            [matAutocomplete]="auto"
+            placeholder="{{placeholder}}"
+            [matChipInputFor]="chipList"
+            [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+            (matChipInputTokenEnd)="add($event)">
+        </mat-chip-list>
+    </mat-form-field>
+    <mat-error *ngIf="tagCtrl.hasError('invalid')">Must be a new, valid VTuber.</mat-error>
+    
+    <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selected($event)">
+        <!-- Disabled -->
+    </mat-autocomplete>
 
-<mat-tab-group animationDuration="0ms">
-    <mat-tab label="Stream Views">
-        <mat-card>
-            <mat-card class="mat-elevation-z4">
-                <canvas baseChart 
-                    [data]="monthViewData"
-                    [options]="monthViewOptions"
-                    [type]="lineChartType"
-                    (chartHover)="chartHovered($event)"
-                    (chartClick)="chartClicked($event)">
-                </canvas>
-            </mat-card>
-            <mat-card class="mat-elevation-z4">
-                <canvas baseChart 
-                    [data]="dayViewData"
-                    [options]="dayViewOptions"
-                    [type]="lineChartType"
-                    (chartHover)="chartHovered($event)"
-                    (chartClick)="chartClicked($event)">
-                </canvas>
-            </mat-card>
-        </mat-card>
-    </mat-tab>
-    <mat-tab label="Stream Duration">
-        <mat-card>
-            <mat-card class="mat-elevation-z4">
-                <canvas baseChart 
-                    [data]="monthTimeData"
-                    [options]="monthTimeOptions"
-                    [type]="lineChartType"
-                    (chartHover)="chartHovered($event)"
-                    (chartClick)="chartClicked($event)">
-                </canvas>
-            </mat-card>
-            <mat-card class="mat-elevation-z4">
-                <canvas baseChart 
-                    [data]="dayTimeData"
-                    [options]="dayTimeOptions"
-                    [type]="lineChartType"
-                    (chartHover)="chartHovered($event)"
-                    (chartClick)="chartClicked($event)">
-                </canvas>
-            </mat-card>
-        </mat-card>
-    </mat-tab>
+    <mat-tab-group animationDuration="0ms">
+        
+        <mat-tab label="Stream Views">
+            <mat-card>
+                <mat-card class="mat-elevation-z4">
+                    <canvas baseChart 
+                        [data]="monthViewData"
+                        [options]="monthViewOptions"
+                        [type]="lineChartType"
+                        (chartHover)="chartHovered($event)"
+                        (chartClick)="chartClicked($event)">
+                    </canvas>
+                </mat-card>
 
-</mat-tab-group>
+                <mat-card class="mat-elevation-z4">
+                    <canvas baseChart 
+                        [data]="dayViewData"
+                        [options]="dayViewOptions"
+                        [type]="lineChartType"
+                        (chartHover)="chartHovered($event)"
+                        (chartClick)="chartClicked($event)">
+                    </canvas>
+                </mat-card>
+            </mat-card>
+        </mat-tab>
+
+        <mat-tab label="Stream Duration">
+            <mat-card>
+                <mat-card class="mat-elevation-z4">
+                    <canvas baseChart 
+                        [data]="monthTimeData"
+                        [options]="monthTimeOptions"
+                        [type]="lineChartType"
+                        (chartHover)="chartHovered($event)"
+                        (chartClick)="chartClicked($event)">
+                    </canvas>
+                </mat-card>
+
+                <mat-card class="mat-elevation-z4">
+                    <canvas baseChart 
+                        [data]="dayTimeData"
+                        [options]="dayTimeOptions"
+                        [type]="lineChartType"
+                        (chartHover)="chartHovered($event)"
+                        (chartClick)="chartClicked($event)">
+                    </canvas>
+                </mat-card>
+            </mat-card>
+        </mat-tab>
+
+    </mat-tab-group>
+</div>

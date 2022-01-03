@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'pm-footer',
@@ -9,6 +10,20 @@ import { Component } from '@angular/core';
 
 export class FooterComponent {
 
-    public github: string = 'https://github.com/CATBIRDS/vTracker';
+  constructor(public dialog: MatDialog) {}
+  public github: string = 'https://github.com/CATBIRDS/vTracker';
+  public catbird: string = "https://catbird.club";
+  
+  openDialog() {
+    this.dialog.open(FooterDialog);
+  }
 
 }
+
+@Component({
+  selector: 'FooterDialog',
+  templateUrl: 'dialog.html',
+  styleUrls: ['./footer.component.css'],
+})
+
+export class FooterDialog {}

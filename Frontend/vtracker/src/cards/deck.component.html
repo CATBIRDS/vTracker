@@ -1,6 +1,8 @@
 <div class="content">
 
   <!-- Favorites -->
+  <!-- Temporarily Out of Service -->
+  <!--
   <mat-expansion-panel>
     <mat-expansion-panel-header>
       <mat-panel-title>
@@ -13,7 +15,7 @@
     <span class='empty'>{{initStorage().length != 0 ? '' : 'Favorited vTubers will appear here.'}}</span>
     <div  fxLayout="row wrap" fxLayoutGap="16px grid">
       <div fxFlex="33%" *ngFor="let card of initStorage()">
-        <pm-card 
+        <pm-card
         [imageURL]="parseFavorite(card, 'thumbnail_url').replace('{width}', '440').replace('{height}', '248')"
         [title]="parseFavorite(card, 'title')"
         [streamer]="parseFavorite(card, 'user_name')"
@@ -29,11 +31,14 @@
       </div>
     </div>
   </mat-expansion-panel>
+  -->
 
   <!-- Main -->
   <mat-toolbar>
     All vTubers
     <span class="toolbar-spacer"></span>
+    <mat-slide-toggle [checked]="hideOffline" [(ngModel)]="hideOffline" (change)="toggleOffline($event)">Hide Offline Streams</mat-slide-toggle>
+    <span class="toolbar-spacer-small"></span>
     <mat-slide-toggle [checked]="blurMature" [(ngModel)]="blurMature" (change)="toggleMature($event)">Hide 18+ Streams</mat-slide-toggle>
   </mat-toolbar>
   

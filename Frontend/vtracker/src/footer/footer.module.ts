@@ -1,14 +1,17 @@
 import { NgModule } from '@angular/core';
-
-import { FooterComponent } from './footer.component';
+import { MatDialogModule } from '@angular/material/dialog';
+import { FooterComponent, FooterDialog } from './footer.component';
 
 @NgModule({
-  imports: [],
-  exports: [
-    FooterComponent,
+  imports: [
+    MatDialogModule
   ],
-  declarations: [FooterComponent],
+  exports: [
+    FooterComponent
+  ],
+  declarations: [FooterComponent, FooterDialog],
   providers: [],
 })
 
 export class FooterModule {}
+

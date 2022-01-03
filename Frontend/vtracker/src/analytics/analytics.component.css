@@ -1,0 +1,16 @@
+.analytics-container{
+    position: relative;
+    width: 95%;
+    left: 2.5%;
+}
+
+.mat-form-field{
+    width: 100%;
+}
+
+.mat-error{
+    margin-top: -21px;
+    padding: 4px;
+    font-size: 10.0pt;
+    font-family: 'Inter', sans-serif;
+}
