@@ -312,8 +312,8 @@ export class DeckComponent {
 
   tagStrip(input: Array<string>){
     let vGUID = '52d7e4cc-633d-46f5-818c-bb59102d9549'; // Manually added GUID for Vtuber Tag
-    //let filtered = input.filter(e => e !== vGUID);
-    return input;
+    let filtered = input.filter(e => e !== vGUID);
+    return filtered;
   }
   
   listStreamers() {
